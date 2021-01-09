@@ -36,6 +36,7 @@
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
@@ -81,6 +82,7 @@ pam_sm_acct_mgmt(pam_handle_t * pamh, __attribute__((unused)) int flags,
 	const char     *user, *service, *confuri, *puri, *pstr;
 	char		host[MAXHOSTNAMELEN + 1], finaluri[MAXURILEN];
 	int		pam_err = PAM_AUTH_ERR;
+	long		timeout = 30;
 	CURL	       *curl;
 	CURLcode	curlres;
 
@@ -89,6 +91,8 @@ pam_sm_acct_mgmt(pam_handle_t * pamh, __attribute__((unused)) int flags,
 	for (int i = 0; i < argc; i++) {
 		const char     *value = strchr(argv[i], '=');
 		if (value != NULL) {
+			if (strncmp(argv[i], "timeout=", 8) == 0)
+				timeout = atol(value + 1);
 			if (strncmp(argv[i], "uri=", 4) == 0)
 				confuri = value + 1;
 		} else if (strncmp(argv[i], "debug", 5) == 0) {
@@ -152,6 +156,7 @@ pam_sm_acct_mgmt(pam_handle_t * pamh, __attribute__((unused)) int flags,
 	curl = curl_easy_init();
 	if (curl) {
 		curl_easy_setopt(curl, CURLOPT_URL, finaluri);
+		curl_easy_setopt(curl, CURLOPT_TIMEOUT, timeout);
 		curl_easy_setopt(curl, CURLOPT_NOBODY, 1);
 		curlres = curl_easy_perform(curl);
 		dbgprnt("curlres: %d\n", curlres);

@@ -6,14 +6,19 @@ This module currently only implements the account stack. To use it, include the 
 `account        required        /path/to/pam_http.so    uri=https://www.example.com/?user=%u&host=%h&service=%s`
 
 ### Arguments
-debug:  Turns debugging on. Output to stderr of whatever program is calling the PAM stack.
-uri:    Location to call. Returns success if it is an HTTP 200 response code. All other response codes are considered errors.
+Argument | Description
+:--------|:-----------
+debug    | Turns debugging on. Output to stderr of whatever program is calling the PAM stack.
+timeout  | Specify the number of seconds to wait for return before failing. Defaults to 30 seconds.
+uri      | Location to call. Returns success if it is an HTTP 200 response code. All other response codes are considered errors.
 
 The `uri` argument supports the following string substitutions:
-> %%:   A literal %.  
-> %h:   The current hostname of the host making the outbound call.  
-> %s:   The PAM service.  
-> %u:   The username of the user the PAM stack is executing on behalf of. Note, this user must exist in the password file (rather, `getpwname` must succeed).  
+Code | Replacement
+:----|:-----------
+`%%` | A literal `%`.
+`%h` | The current hostname of the host making the outbound call.
+`%s` | The PAM service. Example: `ssh`
+`%u` | The username of the user the PAM stack is executing on behalf of. Note, this user must exist in the password file (rather, `getpwname` must succeed).
 
 ## Build
 The build should work correctly on OpenPAM and Linux-PAM stacks. More testing has occurred on FreeBSD with OpenPAM.
