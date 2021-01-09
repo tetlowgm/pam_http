@@ -4,6 +4,8 @@ LIB=	pam_http
 SRCS=	pam_http.c
 NOMAN=
 
+WARNS?=	3
+
 LDADD+=	-lcurl -lpam
 
 CFLAGS+=	-I/usr/local/include
