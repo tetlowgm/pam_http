@@ -26,6 +26,10 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#ifdef __linux__
+#define _BSD_SOURCE
+#endif
+
 #include <sys/param.h>
 
 #include <pwd.h>
@@ -47,6 +51,15 @@
 #define MAXURILEN 2048
 
 bool		debug = false;
+
+/*
+ * I find it very annoying that strlcat hasn't been integrated into glibc. I
+ * get that it may not be the best practice to just include it here, but it
+ * works and I'm really rather lazy.
+ */
+#ifdef __linux__
+#include "strlcat.c"
+#endif
 
 static void
 dbgprnt(char *fmt,...)
