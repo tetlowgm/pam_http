@@ -50,7 +50,7 @@
 
 #define MAXURILEN 2048
 
-bool		debug = false;
+static bool	debug = false;
 
 /*
  * I find it very annoying that strlcat hasn't been integrated into glibc. I
@@ -62,7 +62,7 @@ bool		debug = false;
 #endif
 
 static void
-dbgprnt(char *fmt,...)
+dbgprnt(const char *const fmt,...)
 {
 	va_list		ap;
 
@@ -75,7 +75,8 @@ dbgprnt(char *fmt,...)
 }
 
 PAM_EXTERN int
-pam_sm_acct_mgmt(pam_handle_t * pamh, int flags, int argc, const char *argv[])
+pam_sm_acct_mgmt(pam_handle_t * pamh, __attribute__((unused)) int flags,
+		 int argc, const char *argv[])
 {
 	const char     *user, *service, *confuri, *puri, *pstr;
 	char		host[MAXHOSTNAMELEN + 1], finaluri[MAXURILEN];
@@ -167,35 +168,50 @@ pam_sm_acct_mgmt(pam_handle_t * pamh, int flags, int argc, const char *argv[])
 }
 
 PAM_EXTERN int
-pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc, const char *argv[])
+pam_sm_authenticate(__attribute__((unused)) pam_handle_t * pamh,
+		    __attribute__((unused)) int flags,
+		    __attribute__((unused)) int argc,
+		    __attribute__((unused)) const char *argv[])
 {
 
 	return (PAM_SERVICE_ERR);
 }
 
 PAM_EXTERN int
-pam_sm_setcred(pam_handle_t * pamh, int flags, int argc, const char *argv[])
+pam_sm_setcred(__attribute__((unused)) pam_handle_t * pamh,
+	       __attribute__((unused)) int flags,
+	       __attribute__((unused)) int argc,
+	       __attribute__((unused)) const char *argv[])
 {
 
 	return (PAM_SERVICE_ERR);
 }
 
 PAM_EXTERN int
-pam_sm_open_session(pam_handle_t * pamh, int flags, int argc, const char *argv[])
+pam_sm_open_session(__attribute__((unused)) pam_handle_t * pamh,
+		    __attribute__((unused)) int flags,
+		    __attribute__((unused)) int argc,
+		    __attribute__((unused)) const char *argv[])
 {
 
 	return (PAM_SERVICE_ERR);
 }
 
 PAM_EXTERN int
-pam_sm_close_session(pam_handle_t * pamh, int flags, int argc, const char *argv[])
+pam_sm_close_session(__attribute__((unused)) pam_handle_t * pamh,
+		     __attribute__((unused)) int flags,
+		     __attribute__((unused)) int argc,
+		     __attribute__((unused)) const char *argv[])
 {
 
 	return (PAM_SERVICE_ERR);
 }
 
 PAM_EXTERN int
-pam_sm_chauthtok(pam_handle_t * pamh, int flags, int argc, const char *argv[])
+pam_sm_chauthtok(__attribute__((unused)) pam_handle_t * pamh,
+		 __attribute__((unused)) int flags,
+		 __attribute__((unused)) int argc,
+		 __attribute__((unused)) const char *argv[])
 {
 
 	return (PAM_SERVICE_ERR);
