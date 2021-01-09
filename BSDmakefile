@@ -4,9 +4,15 @@ LIB=	pam_http
 SRCS=	pam_http.c
 NOMAN=
 
-LIBADD+=	curl
+LDADD+=	-lcurl -lpam
 
 CFLAGS+=	-I/usr/local/include
-LDFLAGS+=	-D/usr/local/lib
+LDFLAGS+=	-L/usr/local/lib
+
+SHLIBDIR?=	/lib
+SHLIB_NAME?=	${LIB}.so
+MK_DEBUG_FILES=	no
+MK_INSTALLLIB=	no
+MK_PROFILE=	no
 
 .include <bsd.lib.mk>
