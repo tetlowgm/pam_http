@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2021 Gordon Tetlow. All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
  *
@@ -46,12 +46,12 @@
 
 #define MAXURILEN 2048
 
-bool debug = false;
+bool		debug = false;
 
 static void
-dbgprnt(char *fmt, ...)
+dbgprnt(char *fmt,...)
 {
-	va_list ap;
+	va_list		ap;
 
 	if (!debug)
 		return;
@@ -62,17 +62,17 @@ dbgprnt(char *fmt, ...)
 }
 
 PAM_EXTERN int
-pam_sm_acct_mgmt(pam_handle_t *pamh, int flags, int argc, const char *argv[])
+pam_sm_acct_mgmt(pam_handle_t * pamh, int flags, int argc, const char *argv[])
 {
-	const char *user, *service, *confuri, *puri, *pstr;
-	char host[MAXHOSTNAMELEN+1], finaluri[MAXURILEN];
-	int pam_err;
-	CURL *curl;
-	CURLcode curlres;
+	const char     *user, *service, *confuri, *puri, *pstr;
+	char		host[MAXHOSTNAMELEN + 1], finaluri[MAXURILEN];
+	int		pam_err;
+	CURL	       *curl;
+	CURLcode	curlres;
 
 	/* Get configuration items. */
 	for (int i = 0; i < argc; i++) {
-		const char *value = strchr(argv[i], '=');
+		const char     *value = strchr(argv[i], '=');
 		if (value != NULL) {
 			if (strncmp(argv[i], "uri=", 4) == 0)
 				confuri = value + 1;
@@ -87,7 +87,7 @@ pam_sm_acct_mgmt(pam_handle_t *pamh, int flags, int argc, const char *argv[])
 		return (PAM_AUTH_ERR);
 	dbgprnt("hostname: %s\n", host);
 
-	if ((pam_err = pam_get_item(pamh, PAM_SERVICE, (const void**)&service)) != PAM_SUCCESS)
+	if ((pam_err = pam_get_item(pamh, PAM_SERVICE, (const void **)&service)) != PAM_SUCCESS)
 		return (pam_err);
 	dbgprnt("service: %s\n", service);
 
@@ -105,21 +105,26 @@ pam_sm_acct_mgmt(pam_handle_t *pamh, int flags, int argc, const char *argv[])
 			return (PAM_AUTH_ERR);
 		strncat(finaluri, puri, pstr - puri);
 
-		switch(pstr[1]) {
-		case '%':	if (strlcat(finaluri, "%", MAXURILEN) >= MAXURILEN)
-					return (PAM_AUTH_ERR);
-				break;
-		case 'h':	if (strlcat(finaluri, host, MAXURILEN) >= MAXURILEN)
-					return (PAM_AUTH_ERR);
-				break;
-		case 's':	if (strlcat(finaluri, service, MAXURILEN) >= MAXURILEN)
-					return (PAM_AUTH_ERR);
-				break;
-		case 'u':	if (strlcat(finaluri, user, MAXURILEN) >= MAXURILEN)
-					return (PAM_AUTH_ERR);
-				break;
-		default:	dbgprnt("Invalid uri token: %%%c\n", pstr[1]);
+		switch (pstr[1]) {
+		case '%':
+			if (strlcat(finaluri, "%", MAXURILEN) >= MAXURILEN)
 				return (PAM_AUTH_ERR);
+			break;
+		case 'h':
+			if (strlcat(finaluri, host, MAXURILEN) >= MAXURILEN)
+				return (PAM_AUTH_ERR);
+			break;
+		case 's':
+			if (strlcat(finaluri, service, MAXURILEN) >= MAXURILEN)
+				return (PAM_AUTH_ERR);
+			break;
+		case 'u':
+			if (strlcat(finaluri, user, MAXURILEN) >= MAXURILEN)
+				return (PAM_AUTH_ERR);
+			break;
+		default:
+			dbgprnt("Invalid uri token: %%%c\n", pstr[1]);
+			return (PAM_AUTH_ERR);
 		}
 		puri = pstr + 2;
 	}
@@ -137,7 +142,7 @@ pam_sm_acct_mgmt(pam_handle_t *pamh, int flags, int argc, const char *argv[])
 		curl_easy_cleanup(curl);
 
 		if (curlres == CURLE_OK) {
-			long curlrescode;
+			long		curlrescode;
 			curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &curlrescode);
 			dbgprnt("curlrescode: %d\n", curlrescode);
 			if (curlrescode == 200)
@@ -149,35 +154,35 @@ pam_sm_acct_mgmt(pam_handle_t *pamh, int flags, int argc, const char *argv[])
 }
 
 PAM_EXTERN int
-pam_sm_authenticate(pam_handle_t *pamh, int flags, int argc, const char *argv[])
+pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc, const char *argv[])
 {
 
 	return (PAM_SERVICE_ERR);
 }
 
 PAM_EXTERN int
-pam_sm_setcred(pam_handle_t *pamh, int flags, int argc, const char *argv[])
+pam_sm_setcred(pam_handle_t * pamh, int flags, int argc, const char *argv[])
 {
 
 	return (PAM_SERVICE_ERR);
 }
 
 PAM_EXTERN int
-pam_sm_open_session(pam_handle_t *pamh, int flags, int argc, const char *argv[])
+pam_sm_open_session(pam_handle_t * pamh, int flags, int argc, const char *argv[])
 {
 
 	return (PAM_SERVICE_ERR);
 }
 
 PAM_EXTERN int
-pam_sm_close_session(pam_handle_t *pamh, int flags, int argc, const char *argv[])
+pam_sm_close_session(pam_handle_t * pamh, int flags, int argc, const char *argv[])
 {
 
 	return (PAM_SERVICE_ERR);
 }
 
 PAM_EXTERN int
-pam_sm_chauthtok(pam_handle_t *pamh, int flags, int argc, const char *argv[])
+pam_sm_chauthtok(pam_handle_t * pamh, int flags, int argc, const char *argv[])
 {
 
 	return (PAM_SERVICE_ERR);
