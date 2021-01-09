@@ -27,7 +27,7 @@
  */
 
 #ifdef __linux__
-#define _BSD_SOURCE
+#define _POSIX_C_SOURCE 200112L
 #endif
 
 #include <sys/param.h>
