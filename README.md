@@ -18,7 +18,7 @@ Code | Replacement
 `%%` | A literal `%`.
 `%h` | The current hostname of the host making the outbound call.
 `%s` | The PAM service. Example: `ssh`
-`%u` | The username of the user the PAM stack is executing on behalf of. Note, this user must exist in the password file (rather, `getpwname` must succeed).
+`%u` | The username of the user the PAM stack is executing on behalf of. Note, this user must exist in the password file (rather, `getpwnam` must succeed).
 
 ## Build
 The build should work correctly on OpenPAM and Linux-PAM stacks. More testing has occurred on FreeBSD with OpenPAM.
