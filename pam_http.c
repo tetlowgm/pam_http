@@ -123,7 +123,8 @@ pam_sm_acct_mgmt(pam_handle_t *pamh, int flags, int argc, const char *argv[])
 		}
 		puri = pstr + 2;
 	}
-	strlcat(finaluri, puri, MAXURILEN);
+	if (strlcat(finaluri, puri, MAXURILEN) >= MAXURILEN)
+		return (PAM_AUTH_ERR);
 	dbgprnt("finaluri: '%s'\n", finaluri);
 
 	/* Time to make the curl call. */
