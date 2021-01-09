@@ -6,13 +6,12 @@ NOMAN=
 
 WARNS?=	3
 
-LDADD+=	-lcurl -lpam
-
 CFLAGS+=	-I/usr/local/include
 LDFLAGS+=	-L/usr/local/lib
+LDADD+=		-lcurl -lpam
 
-SHLIBDIR?=	/lib
-SHLIB_NAME?=	${LIB}.so
+SHLIBDIR=	/usr/local/lib
+SHLIB_NAME=	${LIB}.so
 MK_DEBUG_FILES=	no
 MK_INSTALLLIB=	no
 MK_PROFILE=	no
