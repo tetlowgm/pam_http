@@ -22,3 +22,6 @@ The build should work correctly on OpenPAM and Linux-PAM stacks. More testing ha
 # make install
 ```
 By default, I've included Makefiles for bmake (using the FreeBSD build structure) and gmake. The compiled module will install into `/usr/local/lib/pam_http.so`. If you desire it to be elsewhere, just copy to wherever you want it and update your `pam.conf` configuration to point to it.
+
+On CentOS 7, I had to install `gcc`, `pam-devel`, and `libcurl-devel` to get it to compile.
+On Ubuntu 20.10, I had to install `gcc`, `libpam0g-dev`, and `libcurl4-openssl-dev` to get it to compile.
