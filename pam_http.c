@@ -138,7 +138,7 @@ pam_sm_acct_mgmt(pam_handle_t *pamh, int flags, int argc, const char *argv[])
 		if (curlres == CURLE_OK) {
 			long curlrescode;
 			curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &curlrescode);
-			dbgprnt("curlrescode: %l\n", curlrescode);
+			dbgprnt("curlrescode: %d\n", curlrescode);
 			if (curlrescode == 200)
 				return (PAM_SUCCESS);
 		}
