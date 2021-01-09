@@ -80,7 +80,7 @@ pam_sm_acct_mgmt(pam_handle_t * pamh, __attribute__((unused)) int flags,
 {
 	const char     *user, *service, *confuri, *puri, *pstr;
 	char		host[MAXHOSTNAMELEN + 1], finaluri[MAXURILEN];
-	int		pam_err;
+	int		pam_err = PAM_AUTH_ERR;
 	CURL	       *curl;
 	CURLcode	curlres;
 
@@ -148,24 +148,25 @@ pam_sm_acct_mgmt(pam_handle_t * pamh, __attribute__((unused)) int flags,
 	dbgprnt("finaluri: '%s'\n", finaluri);
 
 	/* Time to make the curl call. */
+	pam_err = PAM_AUTH_ERR;
 	curl = curl_easy_init();
 	if (curl) {
 		curl_easy_setopt(curl, CURLOPT_URL, finaluri);
 		curl_easy_setopt(curl, CURLOPT_NOBODY, 1);
 		curlres = curl_easy_perform(curl);
 		dbgprnt("curlres: %d\n", curlres);
-		curl_easy_cleanup(curl);
 
 		if (curlres == CURLE_OK) {
 			long		curlrescode;
 			curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &curlrescode);
 			dbgprnt("curlrescode: %d\n", curlrescode);
 			if (curlrescode == 200)
-				return (PAM_SUCCESS);
+				pam_err = PAM_SUCCESS;
 		}
+		curl_easy_cleanup(curl);
 	}
 
-	return (PAM_AUTH_ERR);
+	return (pam_err);
 }
 
 PAM_EXTERN int
