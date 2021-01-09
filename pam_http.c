@@ -85,6 +85,7 @@ pam_sm_acct_mgmt(pam_handle_t * pamh, __attribute__((unused)) int flags,
 	CURLcode	curlres;
 
 	/* Get configuration items. */
+	confuri = NULL;
 	for (int i = 0; i < argc; i++) {
 		const char     *value = strchr(argv[i], '=');
 		if (value != NULL) {
