@@ -2,7 +2,7 @@
 PAM service module implementation using HTTP call
 
 ## Usage
-This module currently only implements the account stack. To use it, include the following line in your appropriate pam configuration file:
+This module currently only implements the account stack. To use it, include the following line in your appropriate pam configuration file:  
 `account        required        /path/to/pam_http.so    uri=https://www.example.com/?user=%u&host=%h&service=%s`
 
 ### Arguments
@@ -25,3 +25,5 @@ By default, I've included Makefiles for bmake (using the FreeBSD build structure
 
 On CentOS 7, I had to install `gcc`, `pam-devel`, and `libcurl-devel` to get it to compile.
 On Ubuntu 20.10, I had to install `gcc`, `libpam0g-dev`, and `libcurl4-openssl-dev` to get it to compile.
+
+I found `pamtester` (available on FreeBSD and Ubuntu) to be very helpful in testing.
