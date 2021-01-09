@@ -30,6 +30,8 @@
 #include <sys/param.h>
 
 #include <pwd.h>
+#include <stdarg.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
@@ -45,6 +47,21 @@
 
 #define MAXURILEN 2048
 
+bool debug = false;
+
+static void
+dbgprnt(char *fmt, ...)
+{
+	va_list ap;
+
+	if (!debug)
+		return;
+
+	va_start(ap, fmt);
+	vfprintf(stderr, fmt, ap);
+	va_end(ap);
+}
+
 PAM_EXTERN int
 pam_sm_acct_mgmt(pam_handle_t *pamh, int flags, int argc, const char *argv[])
 {
@@ -54,36 +71,38 @@ pam_sm_acct_mgmt(pam_handle_t *pamh, int flags, int argc, const char *argv[])
 	CURL *curl;
 	CURLcode curlres;
 
-	/* Gather fields to replace in the URI. */
-	if (gethostname(host, MAXHOSTNAMELEN) != 0)
-		return (PAM_AUTH_ERR);
-	fprintf(stderr, "hostname: %s\n", host);
-
-	if ((pam_err = pam_get_item(pamh, PAM_SERVICE, (const void**)&service)) != PAM_SUCCESS)
-		return (pam_err);
-	fprintf(stderr, "service: %s\n", service);
-
-	if ((pam_err = pam_get_user(pamh, &user, NULL)) != PAM_SUCCESS)
-		return (pam_err);
-	if (getpwnam(user) == NULL)
-		return (PAM_USER_UNKNOWN);
-	fprintf(stderr, "username: %s\n", user);
-
 	/* Get configuration items. */
 	for (int i = 0; i < argc; i++) {
 		const char *value = strchr(argv[i], '=');
 		if (value != NULL) {
 			if (strncmp(argv[i], "uri=", 4) == 0)
 				confuri = value + 1;
+		} else if (strncmp(argv[i], "debug", 5) == 0) {
+			debug = true;
 		}
 	}
-	fprintf(stderr, "confuri: '%s'\n", confuri);
+	dbgprnt("confuri: '%s'\n", confuri);
+
+	/* Gather fields to replace in the URI. */
+	if (gethostname(host, MAXHOSTNAMELEN) != 0)
+		return (PAM_AUTH_ERR);
+	dbgprnt("hostname: %s\n", host);
+
+	if ((pam_err = pam_get_item(pamh, PAM_SERVICE, (const void**)&service)) != PAM_SUCCESS)
+		return (pam_err);
+	dbgprnt("service: %s\n", service);
+
+	if ((pam_err = pam_get_user(pamh, &user, NULL)) != PAM_SUCCESS)
+		return (pam_err);
+	if (getpwnam(user) == NULL)
+		return (PAM_USER_UNKNOWN);
+	dbgprnt("username: %s\n", user);
 
 	/* Build expanded URI */
 	puri = confuri;
 	memset(finaluri, 0, MAXURILEN);
 	while ((pstr = strchr(puri, '%')) != NULL) {
-		if (pstr - puri + 1 > MAXURILEN - strlen(finaluri))
+		if ((pstr - puri + 1) > (long)(MAXURILEN - strlen(finaluri)))
 			return (PAM_AUTH_ERR);
 		strncat(finaluri, puri, pstr - puri);
 
@@ -100,25 +119,27 @@ pam_sm_acct_mgmt(pam_handle_t *pamh, int flags, int argc, const char *argv[])
 		case 'u':	if (strlcat(finaluri, user, MAXURILEN) >= MAXURILEN)
 					return (PAM_AUTH_ERR);
 				break;
-		default:	fprintf(stderr, "Invalid uri token: %%%c\n", pstr[1]);
+		default:	dbgprnt("Invalid uri token: %%%c\n", pstr[1]);
 				return (PAM_AUTH_ERR);
 		}
 		puri = pstr + 2;
 	}
 	strlcat(finaluri, puri, MAXURILEN);
-	fprintf(stderr, "finaluri: '%s'\n", finaluri);
+	dbgprnt("finaluri: '%s'\n", finaluri);
 
 	/* Time to make the curl call. */
 	curl = curl_easy_init();
 	if (curl) {
 		curl_easy_setopt(curl, CURLOPT_URL, finaluri);
+		curl_easy_setopt(curl, CURLOPT_NOBODY, 1);
 		curlres = curl_easy_perform(curl);
-		fprintf(stderr, "curlres: %d\n", curlres);
+		dbgprnt("curlres: %d\n", curlres);
 		curl_easy_cleanup(curl);
 
 		if (curlres == CURLE_OK) {
 			long curlrescode;
 			curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &curlrescode);
+			dbgprnt("curlrescode: %l\n", curlrescode);
 			if (curlrescode == 200)
 				return (PAM_SUCCESS);
 		}
