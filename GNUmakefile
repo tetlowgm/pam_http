@@ -5,7 +5,7 @@ SHLIBNAME ?= ${LIB}.so
 PREFIX ?= /usr/local
 LIBPATH ?= $(PREFIX)/lib
 
-CFLAGS += -O2 -pipe -Wall -Werror -I/usr/local/include -fPIC
+CFLAGS += -O2 -pipe -std=c99 -Wall -Werror -I/usr/local/include -fPIC
 LDFLAGS += -L/usr/local/lib
 LDLIBS += -lcurl -lpam
 
