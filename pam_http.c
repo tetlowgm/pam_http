@@ -53,6 +53,11 @@
 
 static bool	debug = false;
 
+struct options {
+	const char     *confuri;
+	long		timeout;
+};
+
 /*
  * I find it very annoying that strlcat hasn't been integrated into glibc. I
  * get that it may not be the best practice to just include it here, but it
@@ -75,88 +80,154 @@ dbgprnt(const char *const fmt,...)
 	va_end(ap);
 }
 
-PAM_EXTERN int
-pam_sm_acct_mgmt(pam_handle_t * pamh, __attribute__((unused)) int flags,
-		 int argc, const char *argv[])
+/*
+ * This routine takes the configuration URI and replaces the template character
+ * sequences with the appropriate expansion. Returns the untruncated length of
+ * the resulting string, so truncation can be trivially detected by comparing
+ * the return value against finaluri_size.
+ */
+static size_t
+builduri(char *finaluri, size_t finaluri_size, const char *confuri,
+         pam_handle_t * pamh, const char * const type)
 {
-	const char     *user, *service, *confuri, *puri, *pstr;
-	char		host[MAXHOSTNAMELEN + 1], finaluri[MAXURILEN];
-	int		pam_err = PAM_AUTH_ERR;
-	long		timeout = 30;
-	CURL	       *curl;
-	CURLcode	curlres;
+	const char     *user = NULL, *service = NULL, *puri, *pstr;
+	char		host[MAXHOSTNAMELEN + 1] = "\0";
+	size_t		totaluri_size = 0;
+	bool		write = true;
 
-	/* Get configuration items. */
-	confuri = NULL;
+	totaluri_size += strlen(confuri);
+	puri = confuri;
+
+	if (finaluri_size == 0)
+		write = false;
+
+	if (write)
+		memset(finaluri, 0, finaluri_size);
+
+	while ((pstr = strchr(puri, '%')) != NULL) {
+		if ((pstr - puri + 1) > (long)(finaluri_size - strlen(finaluri)))
+			write = false;
+		if (write)
+			strncat(finaluri, puri, pstr - puri);
+
+		switch (pstr[1]) {
+		case '%':
+			/* Replacing %% with % makes the string smaller. */
+			totaluri_size--;
+			if (write && (strlcat(finaluri, "%", finaluri_size) >= finaluri_size))
+				write = false;
+			break;
+		case 'h':
+			if (host[0] == '\0') {
+				if (gethostname(host, MAXHOSTNAMELEN) != 0)
+					return 0;
+				dbgprnt("hostname: %s\n", host);
+			}
+
+			/*
+			 * Here (and later) we are replacing %X with a
+			 * string, so sub 2.
+			 */
+			totaluri_size += strlen(host) - 2;
+
+			if (write && (strlcat(finaluri, host, finaluri_size) >= finaluri_size))
+				write = false;
+			break;
+		case 's':
+			if (service == NULL) {
+				if (pam_get_item(pamh, PAM_SERVICE, (const void **)&service) != PAM_SUCCESS)
+					return 0;
+				dbgprnt("service: %s\n", service);
+			}
+
+			totaluri_size += strlen(service) - 2;
+
+			if (write && (strlcat(finaluri, service, finaluri_size) >= finaluri_size))
+				write = false;
+			break;
+		case 't':
+			totaluri_size += strlen(type) - 2;
+
+			if (write && (strlcat(finaluri, type, finaluri_size) >= finaluri_size))
+				write = false;
+			break;
+		case 'u':
+			if (user == NULL) {
+				if (pam_get_user(pamh, &user, NULL) != PAM_SUCCESS)
+					return 0;
+				if (getpwnam(user) == NULL)
+					return 0;
+				dbgprnt("username: %s\n", user);
+			}
+
+			totaluri_size += strlen(user) - 2;
+
+			if (write && (strlcat(finaluri, user, finaluri_size) >= finaluri_size))
+				write = false;
+			break;
+		default:
+			dbgprnt("Invalid uri token: %%%c\n", pstr[1]);
+			return 0;
+		}
+		puri = pstr + 2;
+	}
+	if (write && (strlcat(finaluri, puri, finaluri_size) >= finaluri_size))
+		;
+	dbgprnt("finaluri: '%s'\n", finaluri);
+
+	return totaluri_size;
+}
+
+static void
+parse_args(struct options *opt, int argc, const char *argv[])
+{
+
+	opt->confuri = NULL;
+	opt->timeout = 30;
+
 	for (int i = 0; i < argc; i++) {
 		const char     *value = strchr(argv[i], '=');
 		if (value != NULL) {
 			if (strncmp(argv[i], "timeout=", 8) == 0)
-				timeout = atol(value + 1);
+				opt->timeout = atol(value + 1);
 			if (strncmp(argv[i], "uri=", 4) == 0)
-				confuri = value + 1;
+				opt->confuri = value + 1;
 		} else if (strncmp(argv[i], "debug", 5) == 0) {
 			debug = true;
 		}
 	}
-	dbgprnt("confuri: '%s'\n", confuri);
+	dbgprnt("Options:\n  confuri: '%s'\n  timeout: %ld\n", opt->confuri, opt->timeout);
+}
 
-	/* Gather fields to replace in the URI. */
-	if (gethostname(host, MAXHOSTNAMELEN) != 0)
-		return (PAM_AUTH_ERR);
-	dbgprnt("hostname: %s\n", host);
+PAM_EXTERN int
+pam_sm_acct_mgmt(pam_handle_t * pamh, __attribute__((unused)) int flags,
+		 int argc, const char *argv[])
+{
+	char		finaluri[MAXURILEN + 1];
+	int		pam_err = PAM_AUTH_ERR;
+	size_t		ret;
+	CURL	       *curl;
+	CURLcode	curlres;
+	struct options	opt;
 
-	if ((pam_err = pam_get_item(pamh, PAM_SERVICE, (const void **)&service)) != PAM_SUCCESS)
-		return (pam_err);
-	dbgprnt("service: %s\n", service);
-
-	if ((pam_err = pam_get_user(pamh, &user, NULL)) != PAM_SUCCESS)
-		return (pam_err);
-	if (getpwnam(user) == NULL)
-		return (PAM_USER_UNKNOWN);
-	dbgprnt("username: %s\n", user);
+	/* Get configuration items. */
+	parse_args(&opt, argc, argv);
 
 	/* Build expanded URI */
-	puri = confuri;
-	memset(finaluri, 0, MAXURILEN);
-	while ((pstr = strchr(puri, '%')) != NULL) {
-		if ((pstr - puri + 1) > (long)(MAXURILEN - strlen(finaluri)))
-			return (PAM_AUTH_ERR);
-		strncat(finaluri, puri, pstr - puri);
-
-		switch (pstr[1]) {
-		case '%':
-			if (strlcat(finaluri, "%", MAXURILEN) >= MAXURILEN)
-				return (PAM_AUTH_ERR);
-			break;
-		case 'h':
-			if (strlcat(finaluri, host, MAXURILEN) >= MAXURILEN)
-				return (PAM_AUTH_ERR);
-			break;
-		case 's':
-			if (strlcat(finaluri, service, MAXURILEN) >= MAXURILEN)
-				return (PAM_AUTH_ERR);
-			break;
-		case 'u':
-			if (strlcat(finaluri, user, MAXURILEN) >= MAXURILEN)
-				return (PAM_AUTH_ERR);
-			break;
-		default:
-			dbgprnt("Invalid uri token: %%%c\n", pstr[1]);
-			return (PAM_AUTH_ERR);
-		}
-		puri = pstr + 2;
+	ret = builduri(finaluri, MAXURILEN, opt.confuri, pamh, "account");
+	if (ret == 0)
+		return PAM_AUTH_ERR;
+	else if (ret > MAXURILEN) {
+		dbgprnt("Total URI size larger than buffer: %d > %d\n", ret, MAXURILEN);
+		return PAM_AUTH_ERR;
 	}
-	if (strlcat(finaluri, puri, MAXURILEN) >= MAXURILEN)
-		return (PAM_AUTH_ERR);
-	dbgprnt("finaluri: '%s'\n", finaluri);
 
 	/* Time to make the curl call. */
 	pam_err = PAM_AUTH_ERR;
 	curl = curl_easy_init();
 	if (curl) {
 		curl_easy_setopt(curl, CURLOPT_URL, finaluri);
-		curl_easy_setopt(curl, CURLOPT_TIMEOUT, timeout);
+		curl_easy_setopt(curl, CURLOPT_TIMEOUT, opt.timeout);
 		curl_easy_setopt(curl, CURLOPT_NOBODY, 1);
 		curlres = curl_easy_perform(curl);
 		dbgprnt("curlres: %d\n", curlres);
@@ -195,23 +266,95 @@ pam_sm_setcred(__attribute__((unused)) pam_handle_t * pamh,
 }
 
 PAM_EXTERN int
-pam_sm_open_session(__attribute__((unused)) pam_handle_t * pamh,
-		    __attribute__((unused)) int flags,
-		    __attribute__((unused)) int argc,
-		    __attribute__((unused)) const char *argv[])
+pam_sm_open_session(pam_handle_t * pamh, __attribute__((unused)) int flags,
+		    int argc, const char *argv[])
 {
+	char		finaluri[MAXURILEN];
+	int		pam_err = PAM_AUTH_ERR;
+	size_t		ret;
+	CURL	       *curl;
+	CURLcode	curlres;
+	struct options	opt;
 
-	return (PAM_SERVICE_ERR);
+	/* Get configuration items. */
+	parse_args(&opt, argc, argv);
+
+	/* Build expanded URI */
+	ret = builduri(finaluri, MAXURILEN, opt.confuri, pamh, "open_session");
+	if (ret == 0)
+		return PAM_AUTH_ERR;
+	else if (ret > MAXURILEN) {
+		dbgprnt("Total URI size larger than buffer: %d > %d\n", ret, MAXURILEN);
+		return PAM_AUTH_ERR;
+	}
+
+	/* Time to make the curl call. */
+	pam_err = PAM_AUTH_ERR;
+	curl = curl_easy_init();
+	if (curl) {
+		curl_easy_setopt(curl, CURLOPT_URL, finaluri);
+		curl_easy_setopt(curl, CURLOPT_TIMEOUT, opt.timeout);
+		curl_easy_setopt(curl, CURLOPT_NOBODY, 1);
+		curlres = curl_easy_perform(curl);
+		dbgprnt("curlres: %d\n", curlres);
+
+		if (curlres == CURLE_OK) {
+			long		curlrescode;
+			curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &curlrescode);
+			dbgprnt("curlrescode: %d\n", curlrescode);
+			if (curlrescode == 200)
+				pam_err = PAM_SUCCESS;
+		}
+		curl_easy_cleanup(curl);
+	}
+
+	return (pam_err);
 }
 
 PAM_EXTERN int
-pam_sm_close_session(__attribute__((unused)) pam_handle_t * pamh,
-		     __attribute__((unused)) int flags,
-		     __attribute__((unused)) int argc,
-		     __attribute__((unused)) const char *argv[])
+pam_sm_close_session(pam_handle_t * pamh, __attribute__((unused)) int flags,
+		     int argc, const char *argv[])
 {
+	char		finaluri[MAXURILEN];
+	int		pam_err = PAM_AUTH_ERR;
+	size_t		ret;
+	CURL	       *curl;
+	CURLcode	curlres;
+	struct options	opt;
 
-	return (PAM_SERVICE_ERR);
+	/* Get configuration items. */
+	parse_args(&opt, argc, argv);
+
+	/* Build expanded URI */
+	ret = builduri(finaluri, MAXURILEN, opt.confuri, pamh, "close_session");
+	if (ret == 0)
+		return PAM_AUTH_ERR;
+	else if (ret > MAXURILEN) {
+		dbgprnt("Total URI size larger than buffer: %d > %d\n", ret, MAXURILEN);
+		return PAM_AUTH_ERR;
+	}
+
+	/* Time to make the curl call. */
+	pam_err = PAM_AUTH_ERR;
+	curl = curl_easy_init();
+	if (curl) {
+		curl_easy_setopt(curl, CURLOPT_URL, finaluri);
+		curl_easy_setopt(curl, CURLOPT_TIMEOUT, opt.timeout);
+		curl_easy_setopt(curl, CURLOPT_NOBODY, 1);
+		curlres = curl_easy_perform(curl);
+		dbgprnt("curlres: %d\n", curlres);
+
+		if (curlres == CURLE_OK) {
+			long		curlrescode;
+			curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &curlrescode);
+			dbgprnt("curlrescode: %d\n", curlrescode);
+			if (curlrescode == 200)
+				pam_err = PAM_SUCCESS;
+		}
+		curl_easy_cleanup(curl);
+	}
+
+	return (pam_err);
 }
 
 PAM_EXTERN int
