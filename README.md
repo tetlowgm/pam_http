@@ -2,8 +2,9 @@
 PAM service module implementation using HTTP call
 
 ## Usage
-This module currently only implements the account stack. To use it, include the following line in your appropriate pam configuration file:  
-`account        required        /path/to/pam_http.so    uri=https://www.example.com/?user=%u&host=%h&service=%s`
+This module currently implements the account and session stacks. To use it, include the following line in your appropriate pam configuration file:  
+`account        required        /path/to/pam_http.so    uri=https://www.example.com/?user=%u&host=%h&service=%s&type=%t`  
+`session        required        /path/to/pam_http.so    uri=https://www.example.com/?user=%u&host=%h&service=%s&type=%t`
 
 ### Arguments
 Argument | Description
@@ -18,6 +19,7 @@ Code | Replacement
 `%%` | A literal `%`.
 `%h` | The current hostname of the host making the outbound call.
 `%s` | The PAM service. Example: `ssh`
+`%t` | The call type. Will be one of `account`, `open_session`, or `close_session`.
 `%u` | The username of the user the PAM stack is executing on behalf of. Note, this user must exist in the password file (rather, `getpwnam` must succeed).
 
 ## Build
