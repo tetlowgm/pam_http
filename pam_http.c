@@ -178,6 +178,31 @@ builduri(char *finaluri, size_t finaluri_size, const char *confuri,
 	return totaluri_size;
 }
 
+long
+calluri(const char *uri, const int timeout)
+{
+	long		curlrescode = 500;
+	CURL	       *curl;
+	CURLcode	curlres;
+
+	curl = curl_easy_init();
+	if (curl) {
+		curl_easy_setopt(curl, CURLOPT_URL, uri);
+		curl_easy_setopt(curl, CURLOPT_TIMEOUT, timeout);
+		curl_easy_setopt(curl, CURLOPT_NOBODY, 1);
+		curlres = curl_easy_perform(curl);
+		dbgprnt("curlres: %d\n", curlres);
+
+		if (curlres == CURLE_OK) {
+			curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &curlrescode);
+			dbgprnt("curlrescode: %d\n", curlrescode);
+		}
+		curl_easy_cleanup(curl);
+	}
+
+	return curlrescode;
+}
+
 static void
 parse_args(struct options *opt, int argc, const char *argv[])
 {
@@ -204,10 +229,7 @@ pam_sm_acct_mgmt(pam_handle_t * pamh, __attribute__((unused)) int flags,
 		 int argc, const char *argv[])
 {
 	char		finaluri[MAXURILEN + 1];
-	int		pam_err = PAM_AUTH_ERR;
 	size_t		ret;
-	CURL	       *curl;
-	CURLcode	curlres;
 	struct options	opt;
 
 	/* Get configuration items. */
@@ -223,26 +245,10 @@ pam_sm_acct_mgmt(pam_handle_t * pamh, __attribute__((unused)) int flags,
 	}
 
 	/* Time to make the curl call. */
-	pam_err = PAM_AUTH_ERR;
-	curl = curl_easy_init();
-	if (curl) {
-		curl_easy_setopt(curl, CURLOPT_URL, finaluri);
-		curl_easy_setopt(curl, CURLOPT_TIMEOUT, opt.timeout);
-		curl_easy_setopt(curl, CURLOPT_NOBODY, 1);
-		curlres = curl_easy_perform(curl);
-		dbgprnt("curlres: %d\n", curlres);
-
-		if (curlres == CURLE_OK) {
-			long		curlrescode;
-			curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &curlrescode);
-			dbgprnt("curlrescode: %d\n", curlrescode);
-			if (curlrescode == 200)
-				pam_err = PAM_SUCCESS;
-		}
-		curl_easy_cleanup(curl);
-	}
-
-	return (pam_err);
+	if (calluri(finaluri, opt.timeout) == 200)
+		return PAM_SUCCESS;
+	else
+		return PAM_AUTH_ERR;
 }
 
 PAM_EXTERN int
@@ -270,10 +276,7 @@ pam_sm_open_session(pam_handle_t * pamh, __attribute__((unused)) int flags,
 		    int argc, const char *argv[])
 {
 	char		finaluri[MAXURILEN];
-	int		pam_err = PAM_AUTH_ERR;
 	size_t		ret;
-	CURL	       *curl;
-	CURLcode	curlres;
 	struct options	opt;
 
 	/* Get configuration items. */
@@ -289,26 +292,10 @@ pam_sm_open_session(pam_handle_t * pamh, __attribute__((unused)) int flags,
 	}
 
 	/* Time to make the curl call. */
-	pam_err = PAM_AUTH_ERR;
-	curl = curl_easy_init();
-	if (curl) {
-		curl_easy_setopt(curl, CURLOPT_URL, finaluri);
-		curl_easy_setopt(curl, CURLOPT_TIMEOUT, opt.timeout);
-		curl_easy_setopt(curl, CURLOPT_NOBODY, 1);
-		curlres = curl_easy_perform(curl);
-		dbgprnt("curlres: %d\n", curlres);
-
-		if (curlres == CURLE_OK) {
-			long		curlrescode;
-			curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &curlrescode);
-			dbgprnt("curlrescode: %d\n", curlrescode);
-			if (curlrescode == 200)
-				pam_err = PAM_SUCCESS;
-		}
-		curl_easy_cleanup(curl);
-	}
-
-	return (pam_err);
+	if (calluri(finaluri, opt.timeout) == 200)
+		return PAM_SUCCESS;
+	else
+		return PAM_AUTH_ERR;
 }
 
 PAM_EXTERN int
@@ -316,10 +303,7 @@ pam_sm_close_session(pam_handle_t * pamh, __attribute__((unused)) int flags,
 		     int argc, const char *argv[])
 {
 	char		finaluri[MAXURILEN];
-	int		pam_err = PAM_AUTH_ERR;
 	size_t		ret;
-	CURL	       *curl;
-	CURLcode	curlres;
 	struct options	opt;
 
 	/* Get configuration items. */
@@ -335,26 +319,10 @@ pam_sm_close_session(pam_handle_t * pamh, __attribute__((unused)) int flags,
 	}
 
 	/* Time to make the curl call. */
-	pam_err = PAM_AUTH_ERR;
-	curl = curl_easy_init();
-	if (curl) {
-		curl_easy_setopt(curl, CURLOPT_URL, finaluri);
-		curl_easy_setopt(curl, CURLOPT_TIMEOUT, opt.timeout);
-		curl_easy_setopt(curl, CURLOPT_NOBODY, 1);
-		curlres = curl_easy_perform(curl);
-		dbgprnt("curlres: %d\n", curlres);
-
-		if (curlres == CURLE_OK) {
-			long		curlrescode;
-			curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &curlrescode);
-			dbgprnt("curlrescode: %d\n", curlrescode);
-			if (curlrescode == 200)
-				pam_err = PAM_SUCCESS;
-		}
-		curl_easy_cleanup(curl);
-	}
-
-	return (pam_err);
+	if (calluri(finaluri, opt.timeout) == 200)
+		return PAM_SUCCESS;
+	else
+		return PAM_AUTH_ERR;
 }
 
 PAM_EXTERN int
