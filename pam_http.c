@@ -248,7 +248,7 @@ pam_sm_acct_mgmt(pam_handle_t * pamh, __attribute__((unused)) int flags,
 	if (calluri(finaluri, opt.timeout) == 200)
 		return PAM_SUCCESS;
 	else
-		return PAM_AUTH_ERR;
+		return PAM_PERM_DENIED;
 }
 
 PAM_EXTERN int
@@ -295,7 +295,7 @@ pam_sm_open_session(pam_handle_t * pamh, __attribute__((unused)) int flags,
 	if (calluri(finaluri, opt.timeout) == 200)
 		return PAM_SUCCESS;
 	else
-		return PAM_AUTH_ERR;
+		return PAM_SESSION_ERR;
 }
 
 PAM_EXTERN int
@@ -322,7 +322,7 @@ pam_sm_close_session(pam_handle_t * pamh, __attribute__((unused)) int flags,
 	if (calluri(finaluri, opt.timeout) == 200)
 		return PAM_SUCCESS;
 	else
-		return PAM_AUTH_ERR;
+		return PAM_SESSION_ERR;
 }
 
 PAM_EXTERN int
