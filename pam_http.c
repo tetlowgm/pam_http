@@ -126,7 +126,7 @@ builduri(char *finaluri, size_t finaluri_size, const char *confuri,
 
 			/*
 			 * Here (and later) we are replacing %X with a
-			 * string, so sub 2.
+			 * string, so subtract 2.
 			 */
 			totaluri_size += strlen(host) - 2;
 
