@@ -178,8 +178,8 @@ builduri(char *finaluri, size_t finaluri_size, const char *confuri,
 	return totaluri_size;
 }
 
-long
-calluri(const char *uri, const int timeout)
+static long
+calluri(const char *uri, const long timeout)
 {
 	long		curlrescode = 500;
 	CURL	       *curl;
@@ -189,7 +189,7 @@ calluri(const char *uri, const int timeout)
 	if (curl) {
 		curl_easy_setopt(curl, CURLOPT_URL, uri);
 		curl_easy_setopt(curl, CURLOPT_TIMEOUT, timeout);
-		curl_easy_setopt(curl, CURLOPT_NOBODY, 1);
+		curl_easy_setopt(curl, CURLOPT_NOBODY, 1L);
 		curlres = curl_easy_perform(curl);
 		dbgprnt("curlres: %d\n", curlres);
 
