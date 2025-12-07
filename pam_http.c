@@ -238,10 +238,10 @@ pam_sm_acct_mgmt(pam_handle_t * pamh, __attribute__((unused)) int flags,
 	/* Build expanded URI */
 	ret = builduri(finaluri, MAXURILEN, opt.confuri, pamh, "account");
 	if (ret == 0)
-		return PAM_AUTH_ERR;
+		return PAM_SYSTEM_ERR;
 	else if (ret > MAXURILEN) {
 		dbgprnt("Total URI size larger than buffer: %d > %d\n", ret, MAXURILEN);
-		return PAM_AUTH_ERR;
+		return PAM_SYSTEM_ERR;
 	}
 
 	/* Time to make the curl call. */
@@ -285,10 +285,10 @@ pam_sm_open_session(pam_handle_t * pamh, __attribute__((unused)) int flags,
 	/* Build expanded URI */
 	ret = builduri(finaluri, MAXURILEN, opt.confuri, pamh, "open_session");
 	if (ret == 0)
-		return PAM_AUTH_ERR;
+		return PAM_SYSTEM_ERR;
 	else if (ret > MAXURILEN) {
 		dbgprnt("Total URI size larger than buffer: %d > %d\n", ret, MAXURILEN);
-		return PAM_AUTH_ERR;
+		return PAM_SYSTEM_ERR;
 	}
 
 	/* Time to make the curl call. */
@@ -312,10 +312,10 @@ pam_sm_close_session(pam_handle_t * pamh, __attribute__((unused)) int flags,
 	/* Build expanded URI */
 	ret = builduri(finaluri, MAXURILEN, opt.confuri, pamh, "close_session");
 	if (ret == 0)
-		return PAM_AUTH_ERR;
+		return PAM_SYSTEM_ERR;
 	else if (ret > MAXURILEN) {
 		dbgprnt("Total URI size larger than buffer: %d > %d\n", ret, MAXURILEN);
-		return PAM_AUTH_ERR;
+		return PAM_SYSTEM_ERR;
 	}
 
 	/* Time to make the curl call. */
